@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "obox-python": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--project",
+        "/Users/vinh/app/obox",
+        "/Users/vinh/app/obox/main.py"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}
