@@ -5,7 +5,16 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "a>=1.0",
     "fastapi>=0.128.0",
     "fastmcp>=2.14.4",
     "pydantic-ai>=1.51.0",
+]
+
+[dependency-groups]
+dev = [
+    "anyio>=4.12.1",
+    "dirty-equals>=0.11",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
 ]

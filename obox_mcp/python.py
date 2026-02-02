@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
-from typing import List, Optional
 
 import uvicorn
 from fastapi import FastAPI
@@ -14,20 +13,21 @@ from pydantic import BaseModel
 mcp = FastMCP(
     "OboxPython",
     instructions=(
-        "A tool to manage Python environments and packages using uv in an asynchronous way. "
-        "It supports configuring environments, installing packages, and querying environment state."
+        "A tool to manage Python environments and packages using uv in an "
+        "asynchronous way. It supports configuring environments, installing "
+        "packages, and querying environment state."
     ),
 )
 
 
 class EnvInfo(BaseModel):
     python_version: str
-    venv_path: Optional[str]
-    installed_python_versions: List[str]
-    project_name: Optional[str]
+    venv_path: str | None
+    installed_python_versions: list[str]
+    project_name: str | None
 
 
-async def run_uv_async(args: List[str]) -> str:
+async def run_uv_async(args: list[str]) -> str:
     """Helper to run uv commands asynchronously and return output."""
     try:
         process = await asyncio.create_subprocess_exec(
@@ -44,17 +44,20 @@ async def run_uv_async(args: List[str]) -> str:
         return f"Error executing uv {' '.join(args)}: {e!s}"
 
 
-@mcp.tool(name="list_available_python_environments")
-async def list_available_python_environments() -> str:
+async def list_available_python_environments_func() -> str:
     """
-    Lists all available Python environments using 'uv python list'.
+    Lists all available Python versions using 'uv python list'.
     Shows installed versions and versions available for download.
     """
     return await run_uv_async(["python", "list"])
 
 
-@mcp.tool(name="configure_python_environment")
-async def configure_python_environment(version: str) -> str:
+@mcp.tool(name="list_available_python_environments")
+async def list_available_python_environments() -> str:
+    return await list_available_python_environments_func()
+
+
+async def configure_python_environment_func(version: str) -> str:
     """
     Configures the project's Python environment to a specific version
     using 'uv venv --python'. Example versions: '3.11', '3.12', '3.10.12'.
@@ -62,8 +65,24 @@ async def configure_python_environment(version: str) -> str:
     return await run_uv_async(["venv", "--python", version])
 
 
-@mcp.tool
-async def get_env_info() -> str:
+@mcp.tool(name="configure_python_environment")
+async def configure_python_environment(version: str) -> str:
+    return await configure_python_environment_func(version)
+
+
+def self_read_pyproject():
+    """Helper to read project name from pyproject.toml."""
+    try:
+        with open("pyproject.toml") as f:
+            for line in f:
+                if line.startswith("name ="):
+                    return line.split("=")[1].strip().strip('"').strip("'")
+    except Exception:
+        return None
+    return None
+
+
+async def get_env_info_func() -> str:
     """
     Retrieves detailed information about the current Python environment and uv configuration.
     Returns a JSON string with python version, venv path, and available python versions.
@@ -82,13 +101,11 @@ async def get_env_info() -> str:
 
         project_name = None
         if os.path.exists("pyproject.toml"):
-            # Using synchronous file read for locally small file is fine,
-            # but could be wrapped if needed.
-            with open("pyproject.toml") as f:
-                for line in f:
-                    if line.startswith("name ="):
-                        project_name = line.split("=")[1].strip().strip('"').strip("'")
-                        break
+            # Using async file read for consistency
+            loop = asyncio.get_event_loop()
+            content = await loop.run_in_executor(None, self_read_pyproject)
+            if content:
+                project_name = content
 
         info = EnvInfo(
             python_version=py_ver,
@@ -101,8 +118,12 @@ async def get_env_info() -> str:
         return f"Error gathering environment info: {e!s}"
 
 
-@mcp.tool
-async def install_python_package(package_name: str) -> str:
+@mcp.tool(name="get_env_info")
+async def get_env_info() -> str:
+    return await get_env_info_func()
+
+
+async def install_python_package_func(package_name: str) -> str:
     """
     Installs a specified Python package to the current project using 'uv add'.
     This will update the pyproject.toml and lockfile.
@@ -111,21 +132,34 @@ async def install_python_package(package_name: str) -> str:
     return await run_uv_async(["add", package_name])
 
 
-@mcp.tool
-async def get_list_python_packages_installed() -> str:
+@mcp.tool(name="install_python_package")
+async def install_python_package(package_name: str) -> str:
+    return await install_python_package_func(package_name)
+
+
+async def get_list_python_packages_installed_func() -> str:
     """
     Returns a list of all installed Python packages in the current environment using 'uv pip list'.
     """
     return await run_uv_async(["pip", "list"])
 
 
-@mcp.tool
-async def uv_sync() -> str:
+@mcp.tool(name="get_list_python_packages_installed")
+async def get_list_python_packages_installed() -> str:
+    return await get_list_python_packages_installed_func()
+
+
+async def uv_sync_func() -> str:
     """
     Synchronizes the project's environment with the lockfile ('uv sync').
     Ensures all dependencies in pyproject.toml are installed.
     """
     return await run_uv_async(["sync"])
+
+
+@mcp.tool(name="uv_sync")
+async def uv_sync() -> str:
+    return await uv_sync_func()
 
 
 # Optional: FastAPI integration

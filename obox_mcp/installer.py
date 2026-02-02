@@ -45,5 +45,16 @@ async def add_bucket(bucket_name: str) -> str:
     return message
 
 
+@mcp.tool(name="search_package")
+async def search_package(name: str) -> str:
+    """
+    Search for a package using the system's package manager.
+    - On macOS: brew search {name}
+    - On Windows: scoop search {name}
+    """
+    _, message = await utils.search_package(name)
+    return message
+
+
 if __name__ == "__main__":
     mcp.run()

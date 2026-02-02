@@ -127,6 +127,26 @@ async def install_app(
     return False, f"Failed to install {app_name}: {err or out}"
 
 
+async def search_package(name: str) -> tuple[bool, str]:
+    """
+    Search for a package using the system's package manager.
+    - On macOS: brew search {name}
+    - On Windows: scoop search {name}
+    """
+    system = platform.system()
+    if system == "Darwin":
+        cmd = f"brew search {name}"
+    elif system == "Windows":
+        cmd = f"scoop search {name}"
+    else:
+        return False, f"Unsupported OS for package search: {system}"
+
+    code, out, err = await run_command(cmd)
+    if code == 0:
+        return True, out
+    return False, f"Failed to search for {name}: {err or out}"
+
+
 if __name__ == "__main__":
     # Example usage if run directly
     if len(sys.argv) > 1:
