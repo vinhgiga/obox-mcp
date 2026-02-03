@@ -35,9 +35,9 @@ async def test_all_tools_have_descriptions():
         ):
             missing_descriptions.append(tool_name)
 
-    assert not missing_descriptions, (
-        f"The following tools are missing descriptions: {', '.join(missing_descriptions)}"
-    )
+    tools_str = ", ".join(missing_descriptions)
+    msg = f"The following tools are missing descriptions: {tools_str}"
+    assert not missing_descriptions, msg
 
 
 if __name__ == "__main__":

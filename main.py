@@ -58,7 +58,7 @@ def load_mcp_modules(directories: list[str]):
                         # Only warn for files that don't have an MCP instance
                         # (ignoring utils.py or similar if they are just helpers)
                         if filename != "utils.py":
-                            print(f"ℹ️  No FastMCP instance found in {module_name}")
+                            print(f"[info] No FastMCP instance found in {module_name}")
 
                 except Exception as e:
                     print(f"❌ Error loading {module_name}: {e}")

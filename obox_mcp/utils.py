@@ -13,17 +13,59 @@ async def is_command_exists(command: str) -> bool:
     return await asyncio.to_thread(shutil.which, command) is not None
 
 
-async def run_command(command: str) -> tuple[int, str, str]:
+async def run_command(
+    command: str | list[str], input_data: str | None = None
+) -> tuple[int, str, str]:
     """
-    Run a shell command asynchronously and return returncode, stdout, and stderr.
+    Run a shell command or a process with arguments asynchronously.
+    Returns returncode, stdout, and stderr.
     """
-    process = await asyncio.create_subprocess_shell(
-        command,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
+    if isinstance(command, str):
+        process = await asyncio.create_subprocess_shell(
+            command,
+            stdin=asyncio.subprocess.PIPE if input_data is not None else None,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+    else:
+        process = await asyncio.create_subprocess_exec(
+            command[0],
+            *command[1:],
+            stdin=asyncio.subprocess.PIPE if input_data is not None else None,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+
+    stdout, stderr = await process.communicate(
+        input=input_data.encode() if input_data is not None else None
     )
-    stdout, stderr = await process.communicate()
     return process.returncode, stdout.decode().strip(), stderr.decode().strip()
+
+
+async def run_command_output(
+    command: str | list[str],
+    input_data: str | None = None,
+    error_prefix: str = "Error executing",
+    success_codes: list[int] | None = None,
+) -> str:
+    """
+    Run a command and return its stdout or a formatted error message if it fails.
+    """
+    if success_codes is None:
+        success_codes = [0]
+
+    try:
+        code, out, err = await run_command(command, input_data)
+    except Exception as e:
+        cmd_str = command if isinstance(command, str) else " ".join(command)
+        return f"{error_prefix} {cmd_str}: {e!s}"
+    else:
+        if code in success_codes:
+            return out
+
+        cmd_str = command if isinstance(command, str) else " ".join(command)
+        msg = err or out
+        return f"{error_prefix} {cmd_str}: {msg}"
 
 
 async def install_package_manager() -> tuple[bool, str]:
@@ -55,7 +97,7 @@ async def install_package_manager() -> tuple[bool, str]:
         # Official Scoop installation command via PowerShell
         ps_cmd = (
             'powershell -Command "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned '
-            '-Scope CurrentUser; Invoke-RestMethod -Uri https://get.scoop.sh | '
+            "-Scope CurrentUser; Invoke-RestMethod -Uri https://get.scoop.sh | "
             'Invoke-Expression"'
         )
         code, out, err = await run_command(ps_cmd)

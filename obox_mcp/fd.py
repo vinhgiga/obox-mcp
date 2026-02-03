@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import asyncio
 import shlex
-from typing import List, Optional
 
 import uvicorn
 from fastapi import FastAPI
 from fastmcp import FastMCP
+
+from obox_mcp import utils
 
 # Initialize FastMCP server
 mcp = FastMCP(
@@ -18,45 +18,17 @@ mcp = FastMCP(
 )
 
 
-async def run_fd_async(args: List[str]) -> str:
+async def run_fd_async(args: list[str]) -> str:
     """Helper to run fd commands asynchronously and return output."""
-    try:
-        # We assume 'fd' is installed. If not, it might fail.
-        # Check for 'fdfind' which is common on some systems like Ubuntu.
-        cmd = "fd"
-        process = await asyncio.create_subprocess_exec(
-            cmd, *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await process.communicate()
-
-        if process.returncode != 0 and process.returncode != 1:
-            # fd returns 1 if no matches are found, which is fine.
-            # Other non-zero codes might be errors.
-            # However, fd help says:
-            # Exit code 0: matches found
-            # Exit code 1: no matches found
-            # So 1 is not an error.
-            if process.returncode == 1:
-                return "No entries found."
-
-            error_msg = stderr.decode().strip() or stdout.decode().strip()
-            return f"Error executing fd {' '.join(args)} (Exit code {process.returncode}): {error_msg}"
-
-        output = stdout.decode().strip()
-        if not output and process.returncode == 1:
-            return "No entries found."
-
-        return output
-    except FileNotFoundError:
-        return "Error: 'fd' command not found. Please ensure fd-find is installed."
-    except Exception as e:
-        return f"Error executing fd {' '.join(args)}: {e!s}"
+    return await utils.run_command_output(
+        ["fd", *args], error_prefix="Error executing fd", success_codes=[0, 1]
+    )
 
 
 @mcp.tool()
 async def find(
-    pattern: Optional[str] = None,
-    path: Optional[str] = None,
+    pattern: str | None = None,
+    path: str | None = None,
     hidden: bool = False,
     no_ignore: bool = False,
     case_sensitive: bool = False,
@@ -66,14 +38,14 @@ async def find(
     list_details: bool = False,
     follow: bool = False,
     full_path: bool = False,
-    max_depth: Optional[int] = None,
-    exclude: Optional[List[str]] = None,
-    file_type: Optional[str] = None,
-    extension: Optional[List[str]] = None,
-    size: Optional[str] = None,
-    changed_within: Optional[str] = None,
-    changed_before: Optional[str] = None,
-    owner: Optional[str] = None,
+    max_depth: int | None = None,
+    exclude: list[str] | None = None,
+    file_type: str | None = None,
+    extension: list[str] | None = None,
+    size: str | None = None,
+    changed_within: str | None = None,
+    changed_before: str | None = None,
+    owner: str | None = None,
 ) -> str:
     """
     Find entries in the filesystem using fd.
@@ -92,7 +64,8 @@ async def find(
         full_path: Search full absolute path instead of just filename (-p).
         max_depth: Set maximum search depth (-d).
         exclude: Exclude entries that match the given glob pattern (-E).
-        file_type: Filter by type: file (f), directory (d), symlink (l), executable (x), empty (e).
+        file_type: Filter by type: file (f), directory (d), symlink (l),
+                   executable (x), empty (e).
         extension: Filter by file extension (-e).
         size: Limit results based on the size of files (-S).
         changed_within: Filter by file modification time (newer than).
@@ -157,10 +130,10 @@ async def find(
 @mcp.tool()
 async def execute(
     command: str,
-    pattern: Optional[str] = None,
-    path: Optional[str] = None,
-    extension: Optional[List[str]] = None,
-    file_type: Optional[str] = None,
+    pattern: str | None = None,
+    path: str | None = None,
+    extension: list[str] | None = None,
+    file_type: str | None = None,
     batch: bool = False,
 ) -> str:
     """

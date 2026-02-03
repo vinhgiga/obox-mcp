@@ -172,8 +172,10 @@ async def init_project(path: str) -> str:
           })
 
           return (
-            <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col items-center justify-center p-8">
-              <div className="max-w-2xl w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
+            <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col
+              items-center justify-center p-8">
+              <div className="max-w-2xl w-full bg-slate-900 border border-slate-800
+                rounded-2xl p-8 shadow-2xl">
                 <div className="flex items-center gap-4 mb-6">
                   <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
                     <IconRocket size={32} />
@@ -188,7 +190,8 @@ async def init_project(path: str) -> str:
 
                 <div className="space-y-4">
                   <div className="p-4 bg-slate-950 rounded-lg border border-slate-800">
-                    <div className="flex items-center gap-2 mb-2 text-sm font-medium text-slate-500">
+                    <div className="flex items-center gap-2 mb-2 text-sm font-medium
+                      text-slate-500">
                       <IconCode size={16} />
                       <span>TanStack Query Status</span>
                     </div>
@@ -204,14 +207,18 @@ async def init_project(path: str) -> str:
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-slate-950 rounded-lg border border-slate-800 flex flex-col gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <div className="p-4 bg-slate-950 rounded-lg border border-slate-800
+                      flex flex-col gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-wider
+                        text-slate-500">
                         Styling
                       </span>
                       <span className="text-sm">Tailwind CSS v4</span>
                     </div>
-                    <div className="p-4 bg-slate-950 rounded-lg border border-slate-800 flex flex-col gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <div className="p-4 bg-slate-950 rounded-lg border border-slate-800
+                      flex flex-col gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-wider
+                        text-slate-500">
                         Icons
                       </span>
                       <span className="text-sm">Tabler Icons</span>
@@ -219,12 +226,14 @@ async def init_project(path: str) -> str:
                   </div>
                 </div>
 
-                <div className="mt-8 pt-6 border-t border-slate-800 flex justify-between items-center text-sm text-slate-500">
+                <div className="mt-8 pt-6 border-t border-slate-800 flex
+                  justify-between items-center text-sm text-slate-500">
                   <span>Built with Obox MCP</span>
                   <a
                     href="https://vitejs.dev"
                     target="_blank"
-                    className="flex items-center gap-1 hover:text-blue-400 transition-colors"
+                    className="flex items-center gap-1 hover:text-blue-400
+                      transition-colors"
                   >
                     Docs <IconExternalLink size={14} />
                   </a>

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import asyncio
-from typing import List, Optional
-
 import uvicorn
 from fastapi import FastAPI
 from fastmcp import FastMCP
+
+from obox_mcp import utils
 
 # Initialize FastMCP server
 mcp = FastMCP(
@@ -18,34 +17,18 @@ mcp = FastMCP(
 )
 
 
-async def run_rg_async(args: List[str]) -> str:
+async def run_rg_async(args: list[str]) -> str:
     """Helper to run rg commands asynchronously and return output."""
-    try:
-        process = await asyncio.create_subprocess_exec(
-            "rg", *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await process.communicate()
-
-        # Exit code 0: matches found
-        # Exit code 1: no matches found
-        # Exit code 2: error occurred
-        if process.returncode == 2:
-            error_msg = stderr.decode().strip() or stdout.decode().strip()
-            return f"Error executing rg {' '.join(args)}: {error_msg}"
-
-        if process.returncode == 1:
-            return "No matches found."
-
-        return stdout.decode().strip()
-    except Exception as e:
-        return f"Error executing rg {' '.join(args)}: {e!s}"
+    return await utils.run_command_output(
+        ["rg", *args], error_prefix="Error executing rg", success_codes=[0, 1]
+    )
 
 
 @mcp.tool()
 async def search(
     pattern: str,
     path: str = ".",
-    glob: Optional[List[str]] = None,
+    glob: list[str] | None = None,
     case_sensitive: bool = False,
     smart_case: bool = True,
     fixed_strings: bool = False,
@@ -53,7 +36,7 @@ async def search(
     multiline: bool = False,
     line_number: bool = True,
     context: int = 0,
-    max_depth: Optional[int] = None,
+    max_depth: int | None = None,
     include_hidden: bool = False,
     follow_links: bool = False,
 ) -> str:
@@ -63,7 +46,8 @@ async def search(
     Args:
         pattern: The regex pattern to search for.
         path: The directory or file to search in (default is current directory).
-        glob: Optional glob patterns to include/exclude files (e.g., ["*.py", "!*.log"]).
+        glob: Optional glob patterns to include/exclude files (e.g., ["*.py",
+              "!*.log"]).
         case_sensitive: Search case sensitively (default is smart-case).
         smart_case: Smart case search (default True).
         fixed_strings: Treat pattern as a literal string.
@@ -113,7 +97,7 @@ async def search(
 @mcp.tool()
 async def list_files(
     path: str = ".",
-    glob: Optional[List[str]] = None,
+    glob: list[str] | None = None,
     include_hidden: bool = False,
 ) -> str:
     """

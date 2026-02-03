@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import asyncio
-from typing import List, Optional
-
 import uvicorn
 from fastapi import FastAPI
 from fastmcp import FastMCP
+
+from obox_mcp import utils
 
 # Initialize FastMCP server
 mcp = FastMCP(
@@ -18,26 +17,11 @@ mcp = FastMCP(
 )
 
 
-async def run_dotnet_async(args: List[str]) -> str:
+async def run_dotnet_async(args: list[str]) -> str:
     """Helper to run dotnet commands asynchronously and return output."""
-    try:
-        process = await asyncio.create_subprocess_exec(
-            "dotnet",
-            *args,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await process.communicate()
-
-        if process.returncode != 0:
-            error_msg = stderr.decode().strip() or stdout.decode().strip()
-            return f"Error executing dotnet {' '.join(args)}: {error_msg}"
-
-        return stdout.decode().strip()
-    except FileNotFoundError:
-        return "Error: 'dotnet' command not found. Please ensure .NET SDK is installed."
-    except Exception as e:
-        return f"Error executing dotnet {' '.join(args)}: {e!s}"
+    return await utils.run_command_output(
+        ["dotnet", *args], error_prefix="Error executing dotnet"
+    )
 
 
 # --- Solution Management ---
@@ -54,7 +38,7 @@ async def new_sln(name: str, output_dir: str = ".") -> str:
 
 
 @mcp.tool(name="list_sln_projects")
-async def list_sln_projects(sln_file: Optional[str] = None) -> str:
+async def list_sln_projects(sln_file: str | None = None) -> str:
     """
     Lists all projects within a solution.
     If sln_file is not provided, it looks for one in the current directory.
@@ -67,7 +51,7 @@ async def list_sln_projects(sln_file: Optional[str] = None) -> str:
 
 
 @mcp.tool(name="add_project_to_sln")
-async def add_project_to_sln(project_path: str, sln_file: Optional[str] = None) -> str:
+async def add_project_to_sln(project_path: str, sln_file: str | None = None) -> str:
     """
     Adds an existing project to a solution.
     """
@@ -80,7 +64,7 @@ async def add_project_to_sln(project_path: str, sln_file: Optional[str] = None) 
 
 @mcp.tool(name="remove_project_from_sln")
 async def remove_project_from_sln(
-    project_path: str, sln_file: Optional[str] = None
+    project_path: str, sln_file: str | None = None
 ) -> str:
     """
     Removes a project from a solution.
@@ -143,7 +127,7 @@ async def list_project_references(project_file: str) -> str:
 
 @mcp.tool(name="add_package")
 async def add_package(
-    project_file: str, package_name: str, version: Optional[str] = None
+    project_file: str, package_name: str, version: str | None = None
 ) -> str:
     """
     Adds a NuGet package to a project.
@@ -175,7 +159,7 @@ async def list_packages(project_file: str) -> str:
 
 
 @mcp.tool(name="build")
-async def build(target: Optional[str] = None, configuration: str = "Debug") -> str:
+async def build(target: str | None = None, configuration: str = "Debug") -> str:
     """
     Builds a project or solution.
     'target' can be a path to a .csproj or .sln file, or omitted for current directory.
@@ -188,7 +172,7 @@ async def build(target: Optional[str] = None, configuration: str = "Debug") -> s
 
 
 @mcp.tool(name="run_project")
-async def run_project(project_file: Optional[str] = None) -> str:
+async def run_project(project_file: str | None = None) -> str:
     """
     Runs the project in the current folder or a specified project file.
     Note: This is an interactive/long-running command in a real terminal,
@@ -201,7 +185,7 @@ async def run_project(project_file: Optional[str] = None) -> str:
 
 
 @mcp.tool(name="test")
-async def test(target: Optional[str] = None) -> str:
+async def test(target: str | None = None) -> str:
     """
     Executes tests in a project or solution.
     """
@@ -212,7 +196,7 @@ async def test(target: Optional[str] = None) -> str:
 
 
 @mcp.tool(name="clean")
-async def clean(target: Optional[str] = None) -> str:
+async def clean(target: str | None = None) -> str:
     """
     Cleans the output of a project or solution.
     """
@@ -224,9 +208,9 @@ async def clean(target: Optional[str] = None) -> str:
 
 @mcp.tool(name="publish")
 async def publish(
-    target: Optional[str] = None,
+    target: str | None = None,
     configuration: str = "Release",
-    output_dir: Optional[str] = None,
+    output_dir: str | None = None,
 ) -> str:
     """
     Publishes the application for deployment.

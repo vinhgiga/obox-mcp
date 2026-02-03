@@ -1,67 +1,49 @@
 from __future__ import annotations
 
 import asyncio
-from typing import List, Optional
 
+import anyio
 import uvicorn
 from fastapi import FastAPI
 from fastmcp import FastMCP
+
+from obox_mcp import utils
 
 # Initialize FastMCP server
 mcp = FastMCP(
     "OboxFzf",
     instructions=(
         "A tool for fuzzy filtering lists of strings using fzf. "
-        "It provides a non-interactive way to apply fzf matching logic to any list of strings."
+        "It provides a non-interactive way to apply fzf matching logic to any "
+        "list of strings."
     ),
 )
 
 
-async def run_fzf_filter(items: List[str], query: str, args: List[str]) -> str:
+async def run_fzf_filter(items: list[str], query: str, args: list[str]) -> str:
     """Helper to run fzf --filter asynchronously."""
-    try:
-        # Construct the command with --filter
-        # fzf --filter=query [other args]
-        fzf_args = ["--filter", query] + args
-
-        process = await asyncio.create_subprocess_exec(
-            "fzf",
-            *fzf_args,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-
-        # Join items with newlines and encode
-        # We use \n as delimiter. If items contain \n, fzf will treat them as multiple entries.
-        input_data = "\n".join(items).encode()
-        stdout, stderr = await process.communicate(input=input_data)
-
-        if process.returncode == 0:
-            return stdout.decode().strip()
-        if process.returncode == 1:
-            return "No matches found."
-        error_msg = stderr.decode().strip() or stdout.decode().strip()
-        return f"Error executing fzf {' '.join(fzf_args)} (Exit code {process.returncode}): {error_msg}"
-
-    except FileNotFoundError:
-        return "Error: 'fzf' command not found. Please ensure fzf is installed."
-    except Exception as e:
-        return f"Error executing fzf: {e!s}"
+    fzf_args = ["fzf", "--filter", query, *args]
+    input_data = "\n".join(items)
+    return await utils.run_command_output(
+        fzf_args,
+        input_data=input_data,
+        error_prefix="Error executing fzf",
+        success_codes=[0, 1],
+    )
 
 
 @mcp.tool()
 async def filter_items(
-    items: List[str],
+    items: list[str],
     query: str,
     exact: bool = False,
     ignore_case: bool = False,
     smart_case: bool = True,
     no_sort: bool = False,
-    nth: Optional[str] = None,
-    with_nth: Optional[str] = None,
-    delimiter: Optional[str] = None,
-    tiebreak: Optional[str] = None,
+    nth: str | None = None,
+    with_nth: str | None = None,
+    delimiter: str | None = None,
+    tiebreak: str | None = None,
 ) -> str:
     """
     Fuzzy filter a list of items using fzf matching logic.
@@ -124,11 +106,8 @@ async def filter_file_content(
         ignore_case: Case-insensitive match.
     """
     try:
-        with open(file_path) as f:
-            lines = f.readlines()
-
-        # Strip trailing newlines for items
-        items = [line.rstrip("\n") for line in lines]
+        content = await anyio.Path(file_path).read_text()
+        items = content.splitlines()
 
         args = []
         if exact:

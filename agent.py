@@ -14,11 +14,12 @@ from obox_mcp.python import (
 
 # Define the Agent
 python_manager_agent = Agent(
-    'openai:gpt-4o',
+    "openai:gpt-4o",
     system_prompt=(
         "You are an expert Python environment manager. "
         "Your task is to help the user manage their Python environment using uv. "
-        "You can check environment info, install packages, and configure python versions. "
+        "You can check environment info, install packages, and configure python "
+        "versions. "
         "Always check the current environment before making changes."
     ),
 )

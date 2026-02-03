@@ -9,6 +9,8 @@ from fastapi import FastAPI
 from fastmcp import FastMCP
 from pydantic import BaseModel
 
+from obox_mcp import utils
+
 # Initialize FastMCP server
 mcp = FastMCP(
     "OboxPython",
@@ -29,19 +31,9 @@ class EnvInfo(BaseModel):
 
 async def run_uv_async(args: list[str]) -> str:
     """Helper to run uv commands asynchronously and return output."""
-    try:
-        process = await asyncio.create_subprocess_exec(
-            "uv", *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await process.communicate()
-
-        if process.returncode != 0:
-            error_msg = stderr.decode().strip() or stdout.decode().strip()
-            return f"Error executing uv {' '.join(args)}: {error_msg}"
-
-        return stdout.decode().strip()
-    except Exception as e:
-        return f"Error executing uv {' '.join(args)}: {e!s}"
+    return await utils.run_command_output(
+        ["uv", *args], error_prefix="Error executing uv"
+    )
 
 
 async def list_available_python_environments_func() -> str:
@@ -92,7 +84,8 @@ def self_read_pyproject():
 
 async def get_env_info_func() -> str:
     """
-    Retrieves detailed information about the current Python environment and uv configuration.
+    Retrieves detailed information about the current Python environment and uv
+    configuration.
     Returns a JSON string with python version, venv path, and available python versions.
     """
     try:
@@ -105,7 +98,7 @@ async def get_env_info_func() -> str:
         with contextlib.suppress(Exception):
             venv_path = await run_uv_async(["venv", "--show"])
 
-        py_list = [line.strip() for line in py_list_raw.split('\n') if line.strip()]
+        py_list = [line.strip() for line in py_list_raw.split("\n") if line.strip()]
 
         project_name = None
         if os.path.exists("pyproject.toml"):
@@ -129,7 +122,8 @@ async def get_env_info_func() -> str:
 @mcp.tool(name="get_env_info")
 async def get_env_info() -> str:
     """
-    Retrieves detailed information about the current Python environment and uv configuration.
+    Retrieves detailed information about the current Python environment and uv
+    configuration.
     Returns a JSON string with python version, venv path, and available python versions.
     """
     return await get_env_info_func()
@@ -156,7 +150,8 @@ async def install_python_package(package_name: str) -> str:
 
 async def get_list_python_packages_installed_func() -> str:
     """
-    Returns a list of all installed Python packages in the current environment using 'uv pip list'.
+    Returns a list of all installed Python packages in the current environment
+    using 'uv pip list'.
     """
     return await run_uv_async(["pip", "list"])
 
@@ -164,7 +159,8 @@ async def get_list_python_packages_installed_func() -> str:
 @mcp.tool(name="get_list_python_packages_installed")
 async def get_list_python_packages_installed() -> str:
     """
-    Returns a list of all installed Python packages in the current environment using 'uv pip list'.
+    Returns a list of all installed Python packages in the current environment
+    using 'uv pip list'.
     """
     return await get_list_python_packages_installed_func()
 

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import os
-from typing import List, Optional
 
+import anyio
 from fastmcp import FastMCP
 from pydantic import BaseModel
 
@@ -13,8 +13,9 @@ from obox_mcp import utils
 mcp = FastMCP(
     "OboxNodeJS",
     instructions=(
-        "A tool to manage Node.js environments and packages using fnm and pnpm in an asynchronous way. "
-        "It supports installing Node.js versions, managing packages, and querying environment state."
+        "A tool to manage Node.js environments and packages using fnm and pnpm in "
+        "an asynchronous way. It supports installing Node.js versions, managing "
+        "packages, and querying environment state."
     ),
 )
 
@@ -22,25 +23,13 @@ mcp = FastMCP(
 class NodeEnvInfo(BaseModel):
     node_version: str
     pnpm_version: str
-    installed_node_versions: List[str]
-    project_name: Optional[str]
+    installed_node_versions: list[str]
+    project_name: str | None
 
 
-async def run_command_async(cmd: str, args: List[str]) -> str:
+async def run_command_async(cmd: str, args: list[str]) -> str:
     """Helper to run commands asynchronously and return output."""
-    try:
-        process = await asyncio.create_subprocess_exec(
-            cmd, *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await process.communicate()
-
-        if process.returncode != 0:
-            error_msg = stderr.decode().strip() or stdout.decode().strip()
-            return f"Error executing {cmd} {' '.join(args)}: {error_msg}"
-
-        return stdout.decode().strip()
-    except Exception as e:
-        return f"Error executing {cmd} {' '.join(args)}: {e!s}"
+    return await utils.run_command_output([cmd, *args])
 
 
 @mcp.tool(name="install_nodejs_tools")
@@ -52,11 +41,11 @@ async def install_nodejs_tools() -> str:
     results = []
 
     # Install fnm
-    success, msg = await utils.install_app("fnm")
+    _success, msg = await utils.install_app("fnm")
     results.append(f"fnm: {msg}")
 
     # Install pnpm
-    success, msg = await utils.install_app("pnpm")
+    _success, msg = await utils.install_app("pnpm")
     results.append(f"pnpm: {msg}")
 
     return "\n".join(results)
@@ -91,7 +80,8 @@ async def install_node_version(version: str) -> str:
 async def use_node_version(version: str) -> str:
     """
     Sets the current Node.js version using 'fnm use'.
-    Note: This may require a shell restart or 'eval $(fnm env)' to reflect in some terminals.
+    Note: This may require a shell restart or 'eval $(fnm env)' to reflect in
+    some terminals.
     """
     return await run_command_async("fnm", ["use", version])
 
@@ -110,15 +100,15 @@ async def get_nodejs_info() -> str:
             node_ver_task, pnpm_ver_task, fnm_list_task
         )
 
-        fnm_list = [line.strip() for line in fnm_list_raw.split('\n') if line.strip()]
+        fnm_list = [line.strip() for line in fnm_list_raw.split("\n") if line.strip()]
 
         project_name = None
         if os.path.exists("package.json"):
             import json
 
-            with open("package.json") as f:
-                data = json.load(f)
-                project_name = data.get("name")
+            content = await anyio.Path("package.json").read_text()
+            data = json.loads(content)
+            project_name = data.get("name")
 
         info = NodeEnvInfo(
             node_version=node_ver,
