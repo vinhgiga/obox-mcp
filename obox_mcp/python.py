@@ -54,6 +54,10 @@ async def list_available_python_environments_func() -> str:
 
 @mcp.tool(name="list_available_python_environments")
 async def list_available_python_environments() -> str:
+    """
+    Lists all available Python versions using 'uv python list'.
+    Shows installed versions and versions available for download.
+    """
     return await list_available_python_environments_func()
 
 
@@ -67,6 +71,10 @@ async def configure_python_environment_func(version: str) -> str:
 
 @mcp.tool(name="configure_python_environment")
 async def configure_python_environment(version: str) -> str:
+    """
+    Configures the project's Python environment to a specific version
+    using 'uv venv --python'. Example versions: '3.11', '3.12', '3.10.12'.
+    """
     return await configure_python_environment_func(version)
 
 
@@ -120,6 +128,10 @@ async def get_env_info_func() -> str:
 
 @mcp.tool(name="get_env_info")
 async def get_env_info() -> str:
+    """
+    Retrieves detailed information about the current Python environment and uv configuration.
+    Returns a JSON string with python version, venv path, and available python versions.
+    """
     return await get_env_info_func()
 
 
@@ -134,6 +146,11 @@ async def install_python_package_func(package_name: str) -> str:
 
 @mcp.tool(name="install_python_package")
 async def install_python_package(package_name: str) -> str:
+    """
+    Installs a specified Python package to the current project using 'uv add'.
+    This will update the pyproject.toml and lockfile.
+    Example: 'requests', 'pandas==2.1.0'
+    """
     return await install_python_package_func(package_name)
 
 
@@ -146,6 +163,9 @@ async def get_list_python_packages_installed_func() -> str:
 
 @mcp.tool(name="get_list_python_packages_installed")
 async def get_list_python_packages_installed() -> str:
+    """
+    Returns a list of all installed Python packages in the current environment using 'uv pip list'.
+    """
     return await get_list_python_packages_installed_func()
 
 
@@ -159,6 +179,10 @@ async def uv_sync_func() -> str:
 
 @mcp.tool(name="uv_sync")
 async def uv_sync() -> str:
+    """
+    Synchronizes the project's environment with the lockfile ('uv sync').
+    Ensures all dependencies in pyproject.toml are installed.
+    """
     return await uv_sync_func()
 
 
