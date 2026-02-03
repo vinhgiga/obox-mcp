@@ -16,31 +16,15 @@ mcp = FastMCP(
 )
 
 
-async def run_command_async(
-    args: list[str], cwd: str | None = None
-) -> tuple[int, str, str]:
-    """Helper to run commands asynchronously and return (returncode, stdout, stderr)."""
-    try:
-        process = await asyncio.create_subprocess_exec(
-            *args,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            cwd=cwd,
-        )
-        stdout, stderr = await process.communicate()
-        return process.returncode, stdout.decode().strip(), stderr.decode().strip()
-    except Exception as e:
-        return 1, "", str(e)
-
-
 @mcp.tool(name="init_project")
-async def init_project(path: str) -> str:
+async def init_project(path: str, python_version: str = "3.12") -> str:
     """
     Initializes a new FastAPI project at the specified path.
-    Sets up uv environment with Python 3.12 and installs fastapi[standard].
+    Sets up uv environment with the specified Python version and installs fastapi[standard].
 
     Args:
         path: The absolute path where the project should be initialized.
+        python_version: The Python version to use (default: "3.12").
     """
     if not os.path.isabs(path):
         # Try to make it absolute if it starts with ~
@@ -56,20 +40,26 @@ async def init_project(path: str) -> str:
     if not success:
         return f"Error ensuring 'uv' is installed: {msg}"
 
-    # 1. uv init
-    rc, stdout, stderr = await run_command_async(["uv", "init"], cwd=path)
+    # 1. Check available python versions
+    rc, stdout, stderr = await utils.run_command(["uv", "python", "list"])
+    if rc != 0:
+        return f"Error listing python versions: {stderr or stdout}"
+
+    if python_version not in stdout:
+        return (
+            f"Error: Python version '{python_version}' not found in available versions.\n"
+            f"Available versions:\n{stdout}"
+        )
+
+    # 2. uv init with specific python version
+    rc, stdout, stderr = await utils.run_command(
+        ["uv", "init", path, "--python", python_version]
+    )
     if rc != 0:
         return f"Error during 'uv init': {stderr or stdout}"
 
-    # 2. uv python pin 3.12
-    rc, stdout, stderr = await run_command_async(
-        ["uv", "python", "pin", "3.12"], cwd=path
-    )
-    if rc != 0:
-        return f"Error during 'uv python pin 3.12': {stderr or stdout}"
-
     # 3. uv add "fastapi[standard]"
-    rc, stdout, stderr = await run_command_async(
+    rc, stdout, stderr = await utils.run_command(
         ["uv", "add", "fastapi[standard]"], cwd=path
     )
     if rc != 0:
@@ -88,7 +78,7 @@ async def root():
     if not os.path.exists(main_py_path):
 
         def write_file():
-            with open(main_py_path, "w") as f:
+            with open(main_py_path, "w", encoding="utf-8") as f:
                 f.write(main_py_content)
 
         await asyncio.to_thread(write_file)
@@ -96,7 +86,7 @@ async def root():
     # Prepare the hint message and return
     return (
         f"\n🚀 FastAPI project successfully initialized at: {path}\n"
-        "Python 3.12 is pinned and fastapi[standard] is installed.\n"
+        f"Python {python_version} is set and fastapi[standard] is installed.\n"
         "A basic `main.py` has been created.\n\n"
         "💡 Next steps you might want to consider:\n"
         "1. Install database tools: `uv add sqlalchemy` or `uv add sqlmodel`\n"

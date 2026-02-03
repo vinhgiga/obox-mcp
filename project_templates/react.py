@@ -129,13 +129,13 @@ async def init_project(path: str) -> str:
     # 4. Configure src/index.css for Tailwind v4
     index_css_path = os.path.join(path, "src", "index.css")
     index_css_content = textwrap.dedent("""\
-        @layer theme, base, components, mantine, utilities;
+        /* @layer theme, base, components, mantine, utilities;
 
         @import "tailwindcss";
 
         @layer mantine {
           @import "@mantine/core/styles.layer.css";
-        }
+        } */
     """)
 
     def write_index_css():
