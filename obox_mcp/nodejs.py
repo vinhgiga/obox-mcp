@@ -27,9 +27,9 @@ class NodeEnvInfo(BaseModel):
     project_name: str | None
 
 
-async def run_command_async(cmd: str, args: list[str]) -> str:
+async def run_command_async(cmd: str, args: list[str], cwd: str | None = None) -> str:
     """Helper to run commands asynchronously and return output."""
-    return await utils.run_command_output([cmd, *args])
+    return await utils.run_command_output([cmd, *args], cwd=cwd)
 
 
 @mcp.tool(name="install_nodejs_tools")
@@ -87,14 +87,17 @@ async def use_node_version(version: str) -> str:
 
 
 @mcp.tool(name="get_nodejs_info")
-async def get_nodejs_info() -> str:
+async def get_nodejs_info(root_dir: str | None = None) -> str:
     """
     Retrieves detailed information about the current Node.js environment.
     """
     try:
-        node_ver_task = run_command_async("node", ["--version"])
-        pnpm_ver_task = run_command_async("pnpm", ["--version"])
-        fnm_list_task = run_command_async("fnm", ["ls"])
+        if root_dir is None:
+            root_dir = await utils.find_project_root("package.json")
+
+        node_ver_task = run_command_async("node", ["--version"], cwd=root_dir)
+        pnpm_ver_task = run_command_async("pnpm", ["--version"], cwd=root_dir)
+        fnm_list_task = run_command_async("fnm", ["ls"], cwd=root_dir)
 
         node_ver, pnpm_ver, fnm_list_raw = await asyncio.gather(
             node_ver_task, pnpm_ver_task, fnm_list_task
@@ -103,10 +106,13 @@ async def get_nodejs_info() -> str:
         fnm_list = [line.strip() for line in fnm_list_raw.split("\n") if line.strip()]
 
         project_name = None
-        if os.path.exists("package.json"):
+        pkg_json_path = (
+            os.path.join(root_dir, "package.json") if root_dir else "package.json"
+        )
+        if os.path.exists(pkg_json_path):
             import json
 
-            content = await anyio.Path("package.json").read_text()
+            content = await anyio.Path(pkg_json_path).read_text()
             data = json.loads(content)
             project_name = data.get("name")
 
@@ -122,31 +128,39 @@ async def get_nodejs_info() -> str:
 
 
 @mcp.tool(name="pnpm_add")
-async def pnpm_add(package_name: str, dev: bool = False) -> str:
+async def pnpm_add(
+    package_name: str, dev: bool = False, root_dir: str | None = None
+) -> str:
     """
     Installs a package using 'pnpm add'.
     Use dev=True for devDependencies.
     """
+    if root_dir is None:
+        root_dir = await utils.find_project_root("package.json")
     args = ["add", package_name]
     if dev:
         args.append("-D")
-    return await run_command_async("pnpm", args)
+    return await run_command_async("pnpm", args, cwd=root_dir)
 
 
 @mcp.tool(name="pnpm_install")
-async def pnpm_install() -> str:
+async def pnpm_install(root_dir: str | None = None) -> str:
     """
     Installs all dependencies in package.json using 'pnpm install'.
     """
-    return await run_command_async("pnpm", ["install"])
+    if root_dir is None:
+        root_dir = await utils.find_project_root("package.json")
+    return await run_command_async("pnpm", ["install"], cwd=root_dir)
 
 
 @mcp.tool(name="pnpm_run")
-async def pnpm_run(script: str) -> str:
+async def pnpm_run(script: str, root_dir: str | None = None) -> str:
     """
     Runs a script defined in package.json using 'pnpm run <script>'.
     """
-    return await run_command_async("pnpm", ["run", script])
+    if root_dir is None:
+        root_dir = await utils.find_project_root("package.json")
+    return await run_command_async("pnpm", ["run", script], cwd=root_dir)
 
 
 if __name__ == "__main__":

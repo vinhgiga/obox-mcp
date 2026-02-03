@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import platform
 import shutil
 import sys
@@ -14,7 +15,7 @@ async def is_command_exists(command: str) -> bool:
 
 
 async def run_command(
-    command: str | list[str], input_data: str | None = None
+    command: str | list[str], input_data: str | None = None, cwd: str | None = None
 ) -> tuple[int, str, str]:
     """
     Run a shell command or a process with arguments asynchronously.
@@ -26,6 +27,7 @@ async def run_command(
             stdin=asyncio.subprocess.PIPE if input_data is not None else None,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            cwd=cwd,
         )
     else:
         process = await asyncio.create_subprocess_exec(
@@ -34,6 +36,7 @@ async def run_command(
             stdin=asyncio.subprocess.PIPE if input_data is not None else None,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            cwd=cwd,
         )
 
     stdout, stderr = await process.communicate(
@@ -47,6 +50,7 @@ async def run_command_output(
     input_data: str | None = None,
     error_prefix: str = "Error executing",
     success_codes: list[int] | None = None,
+    cwd: str | None = None,
 ) -> str:
     """
     Run a command and return its stdout or a formatted error message if it fails.
@@ -55,7 +59,7 @@ async def run_command_output(
         success_codes = [0]
 
     try:
-        code, out, err = await run_command(command, input_data)
+        code, out, err = await run_command(command, input_data, cwd=cwd)
     except Exception as e:
         cmd_str = command if isinstance(command, str) else " ".join(command)
         return f"{error_prefix} {cmd_str}: {e!s}"
@@ -66,6 +70,34 @@ async def run_command_output(
         cmd_str = command if isinstance(command, str) else " ".join(command)
         msg = err or out
         return f"{error_prefix} {cmd_str}: {msg}"
+
+
+async def find_project_root(filename: str) -> str | None:
+    """
+    Find the directory containing filename by searching upwards from current dir,
+    and then downwards using fd if not found.
+    """
+    current = os.getcwd()
+    # Search upwards
+    while True:
+        if os.path.exists(os.path.join(current, filename)):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            break
+        current = parent
+
+    # Fallback to fd if available
+    if await is_command_exists("fd"):
+        code, out, err = await run_command(
+            ["fd", "-H", "-I", "-t", "f", f"^{filename}$", "--max-depth", "5"]
+        )
+        if code == 0 and out:
+            # Get the first match and return its directory
+            first_match = out.splitlines()[0]
+            return os.path.dirname(os.path.abspath(first_match))
+
+    return None
 
 
 async def install_package_manager() -> tuple[bool, str]:
