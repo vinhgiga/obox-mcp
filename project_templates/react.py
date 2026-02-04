@@ -77,10 +77,13 @@ async def init_project(path: str) -> str:
     if rc != 0:
         return f"Error during 'pnpm create vite': {stderr or stdout}"
 
-    # 2. pnpm install
-    # We need to install base dependencies first (or we can just add the new ones)
-    # Actually, pnpm add will trigger install if needed.
-    # We'll add the requested packages.
+    # 2. Install dependencies
+    # First install base template dependencies (this ensures React and types are present)
+    rc, stdout, stderr = await run_command_async(["pnpm", "install"], cwd=path)
+    if rc != 0:
+        return f"Error during 'pnpm install': {stderr or stdout}"
+
+    # Then add the new requested packages
     rc, stdout, stderr = await run_command_async(
         [
             "pnpm",
@@ -129,11 +132,11 @@ async def init_project(path: str) -> str:
     # 4. Configure src/index.css for Tailwind v4
     index_css_path = os.path.join(path, "src", "index.css")
     index_css_content = textwrap.dedent("""\
-        /* @layer theme, base, components, mantine, utilities;
+        /* @layer theme, base, components, mantine, utilities; */
 
         @import "tailwindcss";
 
-        @layer mantine {
+        /* @layer mantine {
           @import "@mantine/core/styles.layer.css";
         } */
     """)
