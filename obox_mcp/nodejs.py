@@ -134,15 +134,16 @@ async def get_nodejs_info(root_dir: str | None = None) -> str:
 
 @mcp.tool(name="pnpm_add")
 async def pnpm_add(
-    package_name: str, dev: bool = False, root_dir: str | None = None
+    packages: list[str], dev: bool = False, root_dir: str | None = None
 ) -> str:
     """
-    Installs a package using 'pnpm add'.
+    Installs packages using 'pnpm add'.
     Use dev=True for devDependencies.
+    Example: packages=["tailwindcss", "axios"]
     """
     if root_dir is None:
         root_dir = await utils.find_project_root("package.json")
-    args = ["add", package_name]
+    args = ["add", *packages]
     if dev:
         args.append("-D")
     return await run_command_async("pnpm", args, cwd=root_dir)

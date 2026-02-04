@@ -145,26 +145,28 @@ async def get_env_info(root_dir: str | None = None) -> str:
 
 
 async def install_python_package_func(
-    package_name: str, root_dir: str | None = None
+    packages: list[str], root_dir: str | None = None
 ) -> str:
     """
-    Installs a specified Python package to the current project using 'uv add'.
+    Installs specified Python packages to the current project using 'uv add'.
     This will update the pyproject.toml and lockfile.
-    Example: 'requests', 'pandas==2.1.0'
+    Example: packages=['requests', 'pandas==2.1.0']
     """
     if root_dir is None:
         root_dir = await utils.find_project_root("pyproject.toml")
-    return await run_uv_async(["add", package_name], cwd=root_dir)
+    return await run_uv_async(["add", *packages], cwd=root_dir)
 
 
 @mcp.tool(name="install_python_package")
-async def install_python_package(package_name: str, root_dir: str | None = None) -> str:
+async def install_python_package(
+    packages: list[str], root_dir: str | None = None
+) -> str:
     """
-    Installs a specified Python package to the current project using 'uv add'.
+    Installs specified Python packages to the current project using 'uv add'.
     This will update the pyproject.toml and lockfile.
-    Example: 'requests', 'pandas==2.1.0'
+    Example: packages=['requests', 'pandas==2.1.0']
     """
-    return await install_python_package_func(package_name, root_dir=root_dir)
+    return await install_python_package_func(packages, root_dir=root_dir)
 
 
 async def get_list_python_packages_installed_func(

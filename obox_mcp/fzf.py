@@ -37,63 +37,6 @@ async def run_fzf_filter(items: list[str], query: str, args: list[str]) -> str:
 
 
 @mcp.tool()
-async def filter_items(
-    items: list[str],
-    query: str,
-    exact: bool = False,
-    ignore_case: bool = False,
-    smart_case: bool = True,
-    no_sort: bool = False,
-    nth: str | None = None,
-    with_nth: str | None = None,
-    delimiter: str | None = None,
-    tiebreak: str | None = None,
-) -> str:
-    """
-    Fuzzy filter a list of items using fzf matching logic.
-
-    Args:
-        items: The list of strings to filter.
-        query: The fuzzy search pattern.
-        exact: Enable exact-match.
-        ignore_case: Case-insensitive match.
-        smart_case: Smart-case match (default).
-        no_sort: Do not sort the result.
-        nth: Comma-separated list of field index expressions for limiting search scope.
-             Example: "2,3..5", "-1" (last field).
-        with_nth: Transform the presentation of each line using field index expressions.
-        delimiter: Field delimiter regex (default: AWK-style).
-        tiebreak: Comma-separated list of sort criteria to apply when scores are tied:
-                  length, chunk, pathname, begin, end, index.
-    """
-    args = []
-    if exact:
-        args.append("-e")
-
-    if ignore_case:
-        args.append("-i")
-    elif not smart_case:
-        args.append("+i")  # Case-sensitive
-
-    if no_sort:
-        args.append("+s")
-
-    if nth:
-        args.extend(["--nth", nth])
-
-    if with_nth:
-        args.extend(["--with-nth", with_nth])
-
-    if delimiter:
-        args.extend(["--delimiter", delimiter])
-
-    if tiebreak:
-        args.extend(["--tiebreak", tiebreak])
-
-    return await run_fzf_filter(items, query, args)
-
-
-@mcp.tool()
 async def filter_file_content(
     file_path: str,
     query: str,
