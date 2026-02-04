@@ -27,14 +27,16 @@ class NodeEnvInfo(BaseModel):
     project_name: str | None
 
 
-async def run_command_async(cmd: str, args: list[str], cwd: str | None = None) -> str:
+async def run_command_async(
+    cmd: str, args: list[str], cwd: str | None = None, timeout: float | None = None  # noqa: ASYNC109
+) -> str:
     """Helper to run commands asynchronously and return output."""
     if cmd in ["fnm", "pnpm"]:
         success, msg = await utils.install_app(cmd)
         if not success:
             return f"Error installing {cmd}: {msg}"
 
-    return await utils.run_command_output([cmd, *args], cwd=cwd)
+    return await utils.run_command_output([cmd, *args], cwd=cwd, timeout=timeout)
 
 
 @mcp.tool(name="install_nodejs_tools")
@@ -160,13 +162,30 @@ async def pnpm_install(root_dir: str | None = None) -> str:
 
 
 @mcp.tool(name="pnpm_run")
-async def pnpm_run(script: str, root_dir: str | None = None) -> str:
+async def pnpm_run(
+    script: str, root_dir: str | None = None, timeout: float | None = None
+) -> str:
     """
     Runs a script defined in package.json using 'pnpm run <script>'.
+    Set a timeout (in seconds) for long-running scripts like 'dev'.
     """
     if root_dir is None:
         root_dir = await utils.find_project_root("package.json")
-    return await run_command_async("pnpm", ["run", script], cwd=root_dir)
+    return await run_command_async(
+        "pnpm", ["run", script], cwd=root_dir, timeout=timeout
+    )
+
+
+@mcp.tool(name="pnpm_dev")
+async def pnpm_dev(root_dir: str | None = None) -> str:
+    """
+    Runs the 'dev' script in package.json.
+    Automatically returns after 5 seconds of capturing output,
+    leaving the server running in the background.
+    """
+    if root_dir is None:
+        root_dir = await utils.find_project_root("package.json")
+    return await run_command_async("pnpm", ["run", "dev"], cwd=root_dir, timeout=5.0)
 
 
 if __name__ == "__main__":

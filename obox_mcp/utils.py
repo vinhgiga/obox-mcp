@@ -15,11 +15,16 @@ async def is_command_exists(command: str) -> bool:
 
 
 async def run_command(
-    command: str | list[str], input_data: str | None = None, cwd: str | None = None
-) -> tuple[int, str, str]:
+    command: str | list[str],
+    input_data: str | None = None,
+    cwd: str | None = None,
+    timeout: float | None = None,
+) -> tuple[int | None, str, str]:
     """
     Run a shell command or a process with arguments asynchronously.
     Returns returncode, stdout, and stderr.
+    If timeout is provided, it will wait for the specified time and then return
+    whatever output has been captured so far if the process is still running.
     """
     if isinstance(command, str):
         process = await asyncio.create_subprocess_shell(
@@ -39,10 +44,70 @@ async def run_command(
             cwd=cwd,
         )
 
-    stdout, stderr = await process.communicate(
-        input=input_data.encode() if input_data is not None else None
-    )
-    return process.returncode, stdout.decode().strip(), stderr.decode().strip()
+    stdout_data = []
+    stderr_data = []
+
+    async def read_stream(stream, collection):
+        try:
+            while True:
+                line = await stream.readline()
+                if not line:
+                    break
+                collection.append(line.decode())
+        except Exception as e:
+            # Silent failure during stream read is okay, but we could log it
+            print(f"Error reading stream: {e}")
+
+    # Start independent reading tasks
+    stdout_task = asyncio.create_task(read_stream(process.stdout, stdout_data))
+    stderr_task = asyncio.create_task(read_stream(process.stderr, stderr_data))
+
+    try:
+        if timeout:
+            # Send input data if provided
+            if input_data is not None and process.stdin:
+                process.stdin.write(input_data.encode())
+                await process.stdin.drain()
+                process.stdin.close()
+
+            done, _ = await asyncio.wait(
+                [asyncio.create_task(process.wait())],
+                timeout=timeout,
+            )
+            if not done:
+                # This is equivalent to TimeoutError in our context
+                return (
+                    None,
+                    "".join(stdout_data).strip() + "\n(Still running...)",
+                    "".join(stderr_data).strip(),
+                )
+
+            # Process finished, wait for reading tasks to finish (should be near-instant)
+            await asyncio.gather(stdout_task, stderr_task)
+            return (
+                process.returncode,
+                "".join(stdout_data).strip(),
+                "".join(stderr_data).strip(),
+            )
+        # Standard wait until completion
+        # Send input data if provided
+        if input_data is not None and process.stdin:
+            process.stdin.write(input_data.encode())
+            await process.stdin.drain()
+            process.stdin.close()
+
+        await process.wait()
+        await asyncio.gather(stdout_task, stderr_task)
+        return (
+            process.returncode,
+            "".join(stdout_data).strip(),
+            "".join(stderr_data).strip(),
+        )
+    except Exception as e:
+        # Ensure we don't leave tasks hanging
+        stdout_task.cancel()
+        stderr_task.cancel()
+        return -1, "".join(stdout_data), f"{e!s}\n{''.join(stderr_data)}"
 
 
 async def run_command_output(
@@ -51,6 +116,7 @@ async def run_command_output(
     error_prefix: str = "Error executing",
     success_codes: list[int] | None = None,
     cwd: str | None = None,
+    timeout: float | None = None,
 ) -> str:
     """
     Run a command and return its stdout or a formatted error message if it fails.
@@ -59,11 +125,16 @@ async def run_command_output(
         success_codes = [0]
 
     try:
-        code, out, err = await run_command(command, input_data, cwd=cwd)
+        code, out, err = await run_command(
+            command, input_data, cwd=cwd, timeout=timeout
+        )
     except Exception as e:
         cmd_str = command if isinstance(command, str) else " ".join(command)
         return f"{error_prefix} {cmd_str}: {e!s}"
     else:
+        if code is None:  # Timeout case
+            return out
+
         if code in success_codes:
             return out
 
