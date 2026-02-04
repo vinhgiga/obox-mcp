@@ -29,6 +29,11 @@ class NodeEnvInfo(BaseModel):
 
 async def run_command_async(cmd: str, args: list[str], cwd: str | None = None) -> str:
     """Helper to run commands asynchronously and return output."""
+    if cmd in ["fnm", "pnpm"]:
+        success, msg = await utils.install_app(cmd)
+        if not success:
+            return f"Error installing {cmd}: {msg}"
+
     return await utils.run_command_output([cmd, *args], cwd=cwd)
 
 

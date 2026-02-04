@@ -75,13 +75,17 @@ async def root():
     return {"message": "Hello from Obox FastAPI"}
 """
     main_py_path = os.path.join(path, "main.py")
-    if not os.path.exists(main_py_path):
 
-        def write_file():
-            with open(main_py_path, "w", encoding="utf-8") as f:
-                f.write(main_py_content)
+    def write_file():
+        # Backup existing main.py if it exists
+        if os.path.exists(main_py_path):
+            backup_path = os.path.join(path, "main.bk.py")
+            os.rename(main_py_path, backup_path)
 
-        await asyncio.to_thread(write_file)
+        with open(main_py_path, "w", encoding="utf-8") as f:
+            f.write(main_py_content)
+
+    await asyncio.to_thread(write_file)
 
     # Prepare the hint message and return
     return (

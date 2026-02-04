@@ -20,6 +20,10 @@ mcp = FastMCP(
 
 async def run_fd_async(args: list[str]) -> str:
     """Helper to run fd commands asynchronously and return output."""
+    success, msg = await utils.install_app("fd")
+    if not success:
+        return f"Error: {msg}"
+
     return await utils.run_command_output(
         ["fd", *args], error_prefix="Error executing fd", success_codes=[0, 1]
     )

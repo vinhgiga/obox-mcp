@@ -22,6 +22,10 @@ mcp = FastMCP(
 
 async def run_fzf_filter(items: list[str], query: str, args: list[str]) -> str:
     """Helper to run fzf --filter asynchronously."""
+    success, msg = await utils.install_app("fzf")
+    if not success:
+        return f"Error: {msg}"
+
     fzf_args = ["fzf", "--filter", query, *args]
     input_data = "\n".join(items)
     return await utils.run_command_output(
@@ -142,6 +146,11 @@ async def search_files(
     if no_ignore:
         fd_args.append("-I")
     fd_args.append(path)
+
+    # Ensure fd is installed
+    success, msg = await utils.install_app("fd")
+    if not success:
+        return f"Error: {msg}"
 
     try:
         fd_process = await asyncio.create_subprocess_exec(

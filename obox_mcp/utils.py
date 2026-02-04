@@ -89,7 +89,7 @@ async def find_project_root(filename: str) -> str | None:
 
     # Fallback to fd if available
     if await is_command_exists("fd"):
-        code, out, err = await run_command(
+        code, out, _ = await run_command(
             ["fd", "-H", "-I", "-t", "f", f"^{filename}$", "--max-depth", "5"]
         )
         if code == 0 and out:
@@ -163,14 +163,20 @@ async def add_scoop_bucket(bucket_name: str) -> tuple[bool, str]:
 
 
 async def install_app(
-    app_name: str, scoop_bucket: str | None = None
+    app_name: str, scoop_bucket: str | None = None, command_name: str | None = None
 ) -> tuple[bool, str]:
     """
     Check if app is installed, if not, install package manager and then the app.
+    Args:
+        app_name: The name of the package to install.
+        scoop_bucket: Optional Scoop bucket to add (Windows only).
+        command_name: The command to check for existence (defaults to app_name).
     """
+    cmd_to_check = command_name or app_name
+
     # 1. Check if command already exists
-    if await is_command_exists(app_name):
-        return True, f"'{app_name}' is already installed and available on PATH."
+    if await is_command_exists(cmd_to_check):
+        return True, f"'{cmd_to_check}' is already installed and available on PATH."
 
     # 2. Ensure package manager is installed
     success, msg = await install_package_manager()

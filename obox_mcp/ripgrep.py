@@ -19,6 +19,10 @@ mcp = FastMCP(
 
 async def run_rg_async(args: list[str]) -> str:
     """Helper to run rg commands asynchronously and return output."""
+    success, msg = await utils.install_app("ripgrep", command_name="rg")
+    if not success:
+        return f"Error: {msg}"
+
     return await utils.run_command_output(
         ["rg", *args], error_prefix="Error executing rg", success_codes=[0, 1]
     )
