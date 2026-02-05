@@ -143,32 +143,45 @@ async def run_command_output(
         return f"{error_prefix} {cmd_str}: {msg}"
 
 
+async def find_project_roots(filename: str, max_depth: int = 5) -> list[str]:
+    """
+    Find all directories containing filename by searching upwards and then downwards.
+    """
+    roots = []
+    current = os.getcwd()
+    if await is_command_exists("fd"):
+        code, out, _ = await run_command(
+            [
+                "fd",
+                "-H",
+                "-I",
+                "-t",
+                "f",
+                f"^{filename}$",
+                "--max-depth",
+                str(max_depth),
+                "--exclude",
+                "node_modules",
+            ],
+            cwd=current,
+        )
+        if code == 0 and out:
+            for line in out.splitlines():
+                path = os.path.dirname(os.path.abspath(line))
+                if path not in roots:
+                    roots.append(path)
+
+    return sorted(roots)
+
+
 async def find_project_root(filename: str) -> str | None:
     """
     Find the directory containing filename by searching upwards from current dir,
     and then downwards using fd if not found.
+    Returns the first (closest) match found.
     """
-    current = os.getcwd()
-    # Search upwards
-    while True:
-        if os.path.exists(os.path.join(current, filename)):
-            return current
-        parent = os.path.dirname(current)
-        if parent == current:
-            break
-        current = parent
-
-    # Fallback to fd if available
-    if await is_command_exists("fd"):
-        code, out, _ = await run_command(
-            ["fd", "-H", "-I", "-t", "f", f"^{filename}$", "--max-depth", "5"]
-        )
-        if code == 0 and out:
-            # Get the first match and return its directory
-            first_match = out.splitlines()[0]
-            return os.path.dirname(os.path.abspath(first_match))
-
-    return None
+    roots = await find_project_roots(filename)
+    return roots[0] if roots else None
 
 
 async def install_package_manager() -> tuple[bool, str]:

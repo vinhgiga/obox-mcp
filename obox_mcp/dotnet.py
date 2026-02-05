@@ -9,11 +9,7 @@ from obox_mcp import utils
 # Initialize FastMCP server
 mcp = FastMCP(
     "OboxDotNet",
-    instructions=(
-        "A tool to manage .NET solutions, projects, and packages using the dotnet CLI. "
-        "It supports creating solutions/projects, adding/removing references, "
-        "managing NuGet packages, and building/running/testing applications."
-    ),
+    instructions="Manage .NET projects, solutions, and packages via dotnet CLI.",
 )
 
 
@@ -29,20 +25,14 @@ async def run_dotnet_async(args: list[str]) -> str:
 
 @mcp.tool(name="new_sln")
 async def new_sln(name: str, output_dir: str = ".") -> str:
-    """
-    Creates a new empty solution file.
-    Example: name='MySolution', output_dir='./src'
-    """
+    """Creates a new empty solution file."""
     args = ["new", "sln", "-n", name, "-o", output_dir]
     return await run_dotnet_async(args)
 
 
 @mcp.tool(name="list_sln_projects")
 async def list_sln_projects(sln_file: str | None = None) -> str:
-    """
-    Lists all projects within a solution.
-    If sln_file is not provided, it looks for one in the current directory.
-    """
+    """Lists all projects within a solution."""
     args = ["sln"]
     if sln_file:
         args.append(sln_file)
@@ -52,9 +42,7 @@ async def list_sln_projects(sln_file: str | None = None) -> str:
 
 @mcp.tool(name="add_project_to_sln")
 async def add_project_to_sln(project_path: str, sln_file: str | None = None) -> str:
-    """
-    Adds an existing project to a solution.
-    """
+    """Adds an existing project to a solution."""
     args = ["sln"]
     if sln_file:
         args.append(sln_file)
@@ -66,9 +54,7 @@ async def add_project_to_sln(project_path: str, sln_file: str | None = None) -> 
 async def remove_project_from_sln(
     project_path: str, sln_file: str | None = None
 ) -> str:
-    """
-    Removes a project from a solution.
-    """
+    """Removes a project from a solution."""
     args = ["sln"]
     if sln_file:
         args.append(sln_file)
@@ -81,34 +67,26 @@ async def remove_project_from_sln(
 
 @mcp.tool(name="new_project")
 async def new_project(template: str, name: str, output_dir: str = ".") -> str:
-    """
-    Creates a new project based on a template (e.g., 'console', 'classlib', 'webapp').
-    """
+    """Creates a new project from a template."""
     args = ["new", template, "-n", name, "-o", output_dir]
     return await run_dotnet_async(args)
 
 
 @mcp.tool(name="list_project_templates")
 async def list_project_templates() -> str:
-    """
-    Lists all available project templates.
-    """
+    """Lists all available project templates."""
     return await run_dotnet_async(["new", "--list"])
 
 
 @mcp.tool(name="add_project_reference")
 async def add_project_reference(project_file: str, reference_project: str) -> str:
-    """
-    Adds a project-to-project reference.
-    """
+    """Adds a project-to-project reference."""
     return await run_dotnet_async(["add", project_file, "reference", reference_project])
 
 
 @mcp.tool(name="remove_project_reference")
 async def remove_project_reference(project_file: str, reference_project: str) -> str:
-    """
-    Removes a project-to-project reference.
-    """
+    """Removes a project-to-project reference."""
     return await run_dotnet_async(
         ["remove", project_file, "reference", reference_project]
     )
@@ -116,42 +94,65 @@ async def remove_project_reference(project_file: str, reference_project: str) ->
 
 @mcp.tool(name="list_project_references")
 async def list_project_references(project_file: str) -> str:
-    """
-    Lists all project-to-project references for a project.
-    """
+    """Lists project-to-project references."""
     return await run_dotnet_async(["list", project_file, "reference"])
 
 
 # --- Package Management ---
 
 
+@mcp.tool(name="get_dotnet_version")
+async def get_dotnet_version() -> str:
+    """Gets the current .NET SDK version."""
+    try:
+        # This will return something like '8.0.100'
+        version = await run_dotnet_async(["--version"])
+        version = version.strip()
+        if version and not version.startswith("Error"):
+            return version
+    except Exception as e:
+        return f"Error detecting .NET version: {e!s}"
+    return "Unknown"
+
+
 @mcp.tool(name="add_package")
 async def add_package(
     project_file: str, package_name: str, version: str | None = None
 ) -> str:
-    """
-    Adds a NuGet package to a project.
-    Example: project_file='App.csproj', package_name='Newtonsoft.Json', version='13.0.1'
-    """
+    """Adds a NuGet package with automatic versioning."""
+    original_version = version
+    if not version:
+        detected = await get_dotnet_version()
+        if detected and not (detected.startswith("Error") or detected == "Unknown"):
+            major = detected.split(".")[0]
+            version = f"{major}.*"
+
     args = ["add", project_file, "package", package_name]
     if version:
         args.extend(["--version", version])
-    return await run_dotnet_async(args)
+
+    result = await run_dotnet_async(args)
+    if (
+        "Error" in result
+        and original_version is None
+        and version
+        and version.endswith(".*")
+    ):
+        fallback_args = ["add", project_file, "package", package_name]
+        return await run_dotnet_async(fallback_args)
+
+    return result
 
 
 @mcp.tool(name="remove_package")
 async def remove_package(project_file: str, package_name: str) -> str:
-    """
-    Removes a NuGet package from a project.
-    """
+    """Removes a NuGet package from a project."""
     return await run_dotnet_async(["remove", project_file, "package", package_name])
 
 
 @mcp.tool(name="list_packages")
 async def list_packages(project_file: str) -> str:
-    """
-    Lists all NuGet packages references for a project.
-    """
+    """Lists all NuGet packages for a project."""
     return await run_dotnet_async(["list", project_file, "package"])
 
 
@@ -160,10 +161,7 @@ async def list_packages(project_file: str) -> str:
 
 @mcp.tool(name="build")
 async def build(target: str | None = None, configuration: str = "Debug") -> str:
-    """
-    Builds a project or solution.
-    'target' can be a path to a .csproj or .sln file, or omitted for current directory.
-    """
+    """Builds a project or solution."""
     args = ["build"]
     if target:
         args.append(target)
@@ -173,11 +171,7 @@ async def build(target: str | None = None, configuration: str = "Debug") -> str:
 
 @mcp.tool(name="run_project")
 async def run_project(project_file: str | None = None) -> str:
-    """
-    Runs the project in the current folder or a specified project file.
-    Note: This is an interactive/long-running command in a real terminal,
-    but here it returns when the process exits.
-    """
+    """Runs the project."""
     args = ["run"]
     if project_file:
         args.extend(["--project", project_file])
@@ -186,9 +180,7 @@ async def run_project(project_file: str | None = None) -> str:
 
 @mcp.tool(name="test")
 async def test(target: str | None = None) -> str:
-    """
-    Executes tests in a project or solution.
-    """
+    """Executes tests in a project or solution."""
     args = ["test"]
     if target:
         args.append(target)
@@ -197,9 +189,7 @@ async def test(target: str | None = None) -> str:
 
 @mcp.tool(name="clean")
 async def clean(target: str | None = None) -> str:
-    """
-    Cleans the output of a project or solution.
-    """
+    """Cleans the output of a project or solution."""
     args = ["clean"]
     if target:
         args.append(target)
@@ -212,9 +202,7 @@ async def publish(
     configuration: str = "Release",
     output_dir: str | None = None,
 ) -> str:
-    """
-    Publishes the application for deployment.
-    """
+    """Publishes the application for deployment."""
     args = ["publish"]
     if target:
         args.append(target)
@@ -229,9 +217,7 @@ async def publish(
 
 @mcp.tool(name="get_dotnet_info")
 async def get_dotnet_info() -> str:
-    """
-    Displays detailed information about the .NET SDKs and runtimes installed.
-    """
+    """Displays detailed .NET environment info."""
     return await run_dotnet_async(["--info"])
 
 

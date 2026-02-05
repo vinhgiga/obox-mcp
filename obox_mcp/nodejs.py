@@ -15,9 +15,33 @@ mcp = FastMCP(
     instructions=(
         "A tool to manage Node.js environments and packages using fnm and pnpm in "
         "an asynchronous way. It supports installing Node.js versions, managing "
-        "packages, and querying environment state."
+        "packages, and querying environment state. "
+        "If multiple package.json files are found, it will ask for a specific root_dir."
     ),
 )
+
+
+async def resolve_root(root_dir: str | None) -> tuple[str | None, str | None]:
+    """
+    Resolves the root directory. Returns (root_path, error_message).
+    If multiple roots are found and root_dir is None, returns (None, warning_message).
+    """
+    if root_dir:
+        return root_dir, None
+
+    roots = await utils.find_project_roots("package.json")
+    if not roots:
+        return None, "Error: Could not find any directory containing 'package.json'."
+
+    if len(roots) > 1:
+        roots_list = "\n".join(f"- {r}" for r in roots)
+        return None, (
+            "Found multiple project roots containing 'package.json'. "
+            "Please specify the 'root_dir' parameter to choose one:\n"
+            f"{roots_list}"
+        )
+
+    return roots[0], None
 
 
 class NodeEnvInfo(BaseModel):
@@ -28,7 +52,10 @@ class NodeEnvInfo(BaseModel):
 
 
 async def run_command_async(
-    cmd: str, args: list[str], cwd: str | None = None, timeout: float | None = None  # noqa: ASYNC109
+    cmd: str,
+    args: list[str],
+    cwd: str | None = None,
+    timeout: float | None = None,  # noqa: ASYNC109
 ) -> str:
     """Helper to run commands asynchronously and return output."""
     if cmd in ["fnm", "pnpm"]:
@@ -99,8 +126,9 @@ async def get_nodejs_info(root_dir: str | None = None) -> str:
     Retrieves detailed information about the current Node.js environment.
     """
     try:
-        if root_dir is None:
-            root_dir = await utils.find_project_root("package.json")
+        root_dir, err = await resolve_root(root_dir)
+        if err:
+            return err
 
         node_ver_task = run_command_async("node", ["--version"], cwd=root_dir)
         pnpm_ver_task = run_command_async("pnpm", ["--version"], cwd=root_dir)
@@ -143,8 +171,9 @@ async def pnpm_add(
     Use dev=True for devDependencies.
     Example: packages=["tailwindcss", "axios"]
     """
-    if root_dir is None:
-        root_dir = await utils.find_project_root("package.json")
+    root_dir, err = await resolve_root(root_dir)
+    if err:
+        return err
     args = ["add", *packages]
     if dev:
         args.append("-D")
@@ -156,8 +185,9 @@ async def pnpm_install(root_dir: str | None = None) -> str:
     """
     Installs all dependencies in package.json using 'pnpm install'.
     """
-    if root_dir is None:
-        root_dir = await utils.find_project_root("package.json")
+    root_dir, err = await resolve_root(root_dir)
+    if err:
+        return err
     return await run_command_async("pnpm", ["install"], cwd=root_dir)
 
 
@@ -169,8 +199,9 @@ async def pnpm_run(
     Runs a script defined in package.json using 'pnpm run <script>'.
     Set a timeout (in seconds) for long-running scripts like 'dev'.
     """
-    if root_dir is None:
-        root_dir = await utils.find_project_root("package.json")
+    root_dir, err = await resolve_root(root_dir)
+    if err:
+        return err
     return await run_command_async(
         "pnpm", ["run", script], cwd=root_dir, timeout=timeout
     )
@@ -180,12 +211,13 @@ async def pnpm_run(
 async def pnpm_dev(root_dir: str | None = None) -> str:
     """
     Runs the 'dev' script in package.json.
-    Automatically returns after 5 seconds of capturing output,
+    Automatically returns after 120 seconds of capturing output,
     leaving the server running in the background.
     """
-    if root_dir is None:
-        root_dir = await utils.find_project_root("package.json")
-    return await run_command_async("pnpm", ["run", "dev"], cwd=root_dir, timeout=5.0)
+    root_dir, err = await resolve_root(root_dir)
+    if err:
+        return err
+    return await run_command_async("pnpm", ["run", "dev"], cwd=root_dir, timeout=120.0)
 
 
 if __name__ == "__main__":

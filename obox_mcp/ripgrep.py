@@ -40,9 +40,8 @@ async def search(
     Args:
         regex: The regex pattern to search for.
         path: The directory or file to search in (default is current directory).
-        glob: Optional glob patterns to include/exclude files (e.g., ["*.py",
-              "!*.log"]).
-    """
+        glob: Optional glob patterns to include/exclude files (e.g., ["*.py", "!*.log"]).
+    """  # noqa: E501
     args = []
 
     if glob:
