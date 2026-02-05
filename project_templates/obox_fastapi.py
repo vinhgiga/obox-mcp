@@ -73,6 +73,10 @@ app = FastAPI(title="Obox FastAPI Project")
 @app.get("/")
 async def root():
     return {"message": "Hello from Obox FastAPI"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="localhost", port=8000)
 """
     main_py_path = os.path.join(path, "main.py")
 
