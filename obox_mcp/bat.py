@@ -82,16 +82,14 @@ async def read_file(
     style: str = "numbers",
 ) -> str:
     """
-    Read a file using bat with support for line ranges.
-    Enforces a maximum limit of 500 lines per read.
+    Read a file with support for line ranges. Enforces a maximum limit of 500 lines per read.
 
     Args:
         path: Absolute path to the file to read.
         line_range: Line range to read (e.g., "30:", "30:50", ":50", "10").
-                    Defaults to first 500 lines. Max 500 lines allowed.
         style: Output style. Options: 'default', 'plain', 'numbers', 'changes', 'grid', 'header', 'snip'.
         Default is 'numbers' to show line numbers.
-    """
+    """  # noqa: E501
     return await _read_file(path, line_range, style)
 
 

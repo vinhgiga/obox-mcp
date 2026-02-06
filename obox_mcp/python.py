@@ -36,33 +36,13 @@ async def run_uv_async(args: list[str], cwd: str | None = None) -> str:
     )
 
 
-async def list_available_python_environments_func() -> str:
-    """
-    Lists all available Python versions using 'uv python list'.
-    Shows installed versions and versions available for download.
-    """
-    return await run_uv_async(["python", "list"])
-
-
 @mcp.tool(name="list_available_python_environments")
 async def list_available_python_environments() -> str:
     """
-    Lists all available Python versions using 'uv python list'.
+    Lists all available Python versions.
     Shows installed versions and versions available for download.
     """
-    return await list_available_python_environments_func()
-
-
-async def configure_python_environment_func(
-    version: str, root_dir: str | None = None
-) -> str:
-    """
-    Configures the project's Python environment to a specific version
-    using 'uv venv --python'. Example versions: '3.11', '3.12', '3.10.12'.
-    """
-    if root_dir is None:
-        root_dir = await utils.find_project_root("pyproject.toml")
-    return await run_uv_async(["venv", "--python", version], cwd=root_dir)
+    return await run_uv_async(["python", "list"])
 
 
 @mcp.tool(name="configure_python_environment")
@@ -71,9 +51,11 @@ async def configure_python_environment(
 ) -> str:
     """
     Configures the project's Python environment to a specific version
-    using 'uv venv --python'. Example versions: '3.11', '3.12', '3.10.12'.
+    Example versions: '3.12', '3.10.12', '3.10-x86'
     """
-    return await configure_python_environment_func(version, root_dir=root_dir)
+    if root_dir is None:
+        root_dir = await utils.find_project_root("pyproject.toml")
+    return await run_uv_async(["venv", "--python", version], cwd=root_dir)
 
 
 def self_read_pyproject(root_dir: str | None = None):
@@ -137,24 +119,10 @@ async def get_env_info_func(root_dir: str | None = None) -> str:
 @mcp.tool(name="get_env_info")
 async def get_env_info(root_dir: str | None = None) -> str:
     """
-    Retrieves detailed information about the current Python environment and uv
-    configuration.
+    Retrieves detailed information about the current Python environment.
     Returns a JSON string with python version, venv path, and available python versions.
     """
     return await get_env_info_func(root_dir=root_dir)
-
-
-async def install_python_package_func(
-    packages: list[str], root_dir: str | None = None
-) -> str:
-    """
-    Installs specified Python packages to the current project using 'uv add'.
-    This will update the pyproject.toml and lockfile.
-    Example: packages=['requests', 'pandas==2.1.0']
-    """
-    if root_dir is None:
-        root_dir = await utils.find_project_root("pyproject.toml")
-    return await run_uv_async(["add", *packages], cwd=root_dir)
 
 
 @mcp.tool(name="install_python_package")
@@ -162,16 +130,16 @@ async def install_python_package(
     packages: list[str], root_dir: str | None = None
 ) -> str:
     """
-    Installs specified Python packages to the current project using 'uv add'.
-    This will update the pyproject.toml and lockfile.
+    Installs specified Python packages to the current project.
     Example: packages=['requests', 'pandas==2.1.0']
     """
-    return await install_python_package_func(packages, root_dir=root_dir)
+    if root_dir is None:
+        root_dir = await utils.find_project_root("pyproject.toml")
+    return await run_uv_async(["add", *packages], cwd=root_dir)
 
 
-async def get_list_python_packages_installed_func(
-    root_dir: str | None = None,
-) -> str:
+@mcp.tool(name="get_list_python_packages_installed")
+async def get_list_python_packages_installed(root_dir: str | None = None) -> str:
     """
     Returns a list of all installed Python packages in the current environment
     using 'uv pip list'.
@@ -181,32 +149,14 @@ async def get_list_python_packages_installed_func(
     return await run_uv_async(["pip", "list"], cwd=root_dir)
 
 
-@mcp.tool(name="get_list_python_packages_installed")
-async def get_list_python_packages_installed(root_dir: str | None = None) -> str:
+@mcp.tool(name="uv_sync")
+async def uv_sync(root_dir: str | None = None) -> str:
     """
-    Returns a list of all installed Python packages in the current environment
-    using 'uv pip list'.
-    """
-    return await get_list_python_packages_installed_func(root_dir=root_dir)
-
-
-async def uv_sync_func(root_dir: str | None = None) -> str:
-    """
-    Synchronizes the project's environment with the lockfile ('uv sync').
-    Ensures all dependencies in pyproject.toml are installed.
+    Synchronizes the project's environment.
     """
     if root_dir is None:
         root_dir = await utils.find_project_root("pyproject.toml")
     return await run_uv_async(["sync"], cwd=root_dir)
-
-
-@mcp.tool(name="uv_sync")
-async def uv_sync(root_dir: str | None = None) -> str:
-    """
-    Synchronizes the project's environment with the lockfile ('uv sync').
-    Ensures all dependencies in pyproject.toml are installed.
-    """
-    return await uv_sync_func(root_dir=root_dir)
 
 
 # Optional: FastAPI integration

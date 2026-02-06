@@ -114,8 +114,6 @@ async def install_node_version(version: str) -> str:
 async def use_node_version(version: str) -> str:
     """
     Sets the current Node.js version using 'fnm use'.
-    Note: This may require a shell restart or 'eval $(fnm env)' to reflect in
-    some terminals.
     """
     return await run_command_async("fnm", ["use", version])
 
@@ -180,20 +178,22 @@ async def pnpm_add(
     return await run_command_async("pnpm", args, cwd=root_dir)
 
 
-@mcp.tool(name="pnpm_install")
-async def pnpm_install(root_dir: str | None = None) -> str:
+@mcp.tool(name="pnpm_list")
+async def pnpm_list(root_dir: str | None = None) -> str:
     """
-    Installs all dependencies in package.json using 'pnpm install'.
+    Lists all installed packages and their versions using 'pnpm list'.
     """
     root_dir, err = await resolve_root(root_dir)
     if err:
         return err
-    return await run_command_async("pnpm", ["install"], cwd=root_dir)
+    return await run_command_async("pnpm", ["list"], cwd=root_dir)
 
 
 @mcp.tool(name="pnpm_run")
 async def pnpm_run(
-    script: str, root_dir: str | None = None, timeout: float | None = None
+    script: str,
+    root_dir: str | None = None,
+    timeout: float | None = None,  # noqa: ASYNC109
 ) -> str:
     """
     Runs a script defined in package.json using 'pnpm run <script>'.
@@ -205,19 +205,6 @@ async def pnpm_run(
     return await run_command_async(
         "pnpm", ["run", script], cwd=root_dir, timeout=timeout
     )
-
-
-@mcp.tool(name="pnpm_dev")
-async def pnpm_dev(root_dir: str | None = None) -> str:
-    """
-    Runs the 'dev' script in package.json.
-    Automatically returns after 120 seconds of capturing output,
-    leaving the server running in the background.
-    """
-    root_dir, err = await resolve_root(root_dir)
-    if err:
-        return err
-    return await run_command_async("pnpm", ["run", "dev"], cwd=root_dir, timeout=120.0)
 
 
 if __name__ == "__main__":

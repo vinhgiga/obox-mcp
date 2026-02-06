@@ -10,7 +10,10 @@ from obox_mcp import utils
 # Initialize FastMCP server for Just
 mcp = FastMCP(
     "OboxProjectRunner",
-    instructions="Initialize 'just' runner with auto-detected tasks.",
+    instructions=(
+        "Auto-detects tasks and finalizes setup. Call after project creation. "
+        "The agent should modify the generated justfile to fit the project needs."
+    ),
 )
 
 
@@ -81,7 +84,8 @@ async def detect_projects(base_path: str) -> list[tuple[str, str, str]]:
 @mcp.tool(name="project_runner")
 async def project_runner(path: str = ".") -> str:
     """
-    Initializes a justfile by detecting the project structure.
+    Finalizes project setup by detecting structure.
+    Call this tool immediately after creating any new project.
     """
     abs_path = os.path.abspath(path)
 
@@ -186,6 +190,8 @@ async def project_runner(path: str = ".") -> str:
         "1. Open your terminal in the project root.\n"
         "2. Run `just <task_name>` to execute a task.\n"
         "3. Run `just` or `just --list` to see all available tasks.\n"
+        "4. **IMPORTANT**: Review the generated `justfile` and modify it if your "
+        "project requires additional tasks or specific build flags.\n"
     )
 
 

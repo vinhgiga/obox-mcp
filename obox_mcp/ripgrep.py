@@ -10,9 +10,10 @@ from obox_mcp import utils
 mcp = FastMCP(
     "OboxRipgrep",
     instructions=(
-        "A tool to search for patterns in files recursively using ripgrep (rg). "
-        "It respects .gitignore rules and skips hidden files by default. "
-        "Ideal for codebase exploration and finding string occurrences."
+        "A tool to search for regex patterns within the content of files recursively "
+        "using ripgrep (rg). It respects .gitignore rules by default and can "
+        "optionally search hidden files. Ideal for codebase exploration and "
+        "finding string occurrences within the source code."
     ),
 )
 
@@ -33,16 +34,22 @@ async def search(
     regex: str,
     path: str = ".",
     glob: list[str] | None = None,
+    hidden: bool = False,
 ) -> str:
     """
-    Search for a regex pattern in a directory recursively using ripgrep.
+    Search for a regex pattern in a directory.
+    This tool searches through the contents of files.
 
     Args:
-        regex: The regex pattern to search for.
+        regex: The regex pattern to search for in file contents.
         path: The directory or file to search in (default is current directory).
         glob: Optional glob patterns to include/exclude files (e.g., ["*.py", "!*.log"]).
+        hidden: Search hidden files and directories (default: False).
     """  # noqa: E501
     args = []
+
+    if hidden:
+        args.append("--hidden")
 
     if glob:
         for g in glob:
@@ -52,35 +59,6 @@ async def search(
     args.extend([regex, path])
 
     return await run_rg_async(args)
-
-
-@mcp.tool()
-async def list_files(
-    path: str = ".",
-    glob: list[str] | None = None,
-) -> str:
-    """
-    List files that would be searched by ripgrep, respecting .gitignore.
-
-    Args:
-        path: The directory to list files from.
-        glob: Optional glob patterns to filter files.
-    """
-    args = ["--files"]
-    if glob:
-        for g in glob:
-            args.append("-g")
-            args.append(g)
-    args.append(path)
-    return await run_rg_async(args)
-
-
-@mcp.tool()
-async def list_file_types() -> str:
-    """
-    Lists all supported file types that can be used with ripgrep filtering.
-    """
-    return await run_rg_async(["--type-list"])
 
 
 # FastAPI integration for consistency

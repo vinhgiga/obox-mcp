@@ -10,8 +10,9 @@ from obox_mcp import utils
 mcp = FastMCP(
     "OboxFd",
     instructions=(
-        "Find entries in filesystem by pattern, extension, size, etc. "
-        "It respects .gitignore rules and skips hidden files by default."
+        "Search for files and directories within the codebase using patterns or names. "
+        "It respects .gitignore rules and skips hidden files by default. "
+        "Ideal for locating specific source files."
     ),
 )
 
@@ -28,18 +29,18 @@ async def run_fd_async(args: list[str]) -> str:
 
 
 @mcp.tool()
-async def find(
+async def search_files(
     regex: str | None = None,
     glob: str | None = None,
     path: str | None = None,
 ) -> str:
     """
-    Find entries in the filesystem using fd.
+    Search for files and directories in the codebase.
 
     Args:
-        regex: The regular expression to search for.
-        glob: The glob pattern to search for.
-        path: The root directory for the search.
+        regex: A regular expression pattern to match filenames.
+        glob: A glob pattern to match filenames (e.g. `*.py`, `**/*.js`).
+        path: The root directory to start searching from.
     """
     args = []
 
