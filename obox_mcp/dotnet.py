@@ -69,7 +69,14 @@ async def remove_project_from_sln(
 async def new_project(template: str, name: str, output_dir: str = ".") -> str:
     """Creates a new project from a template."""
     args = ["new", template, "-n", name, "-o", output_dir]
-    return await run_dotnet_async(args)
+    result = await run_dotnet_async(args)
+    if "successfully" in result.lower():
+        return (
+            f"{result}\n\n"
+            "🚀 **Next Step**: Call the `project_runner` tool to finalize the setup "
+            "and generate a `justfile` for running the project."
+        )
+    return result
 
 
 @mcp.tool(name="list_project_templates")

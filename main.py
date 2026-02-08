@@ -12,7 +12,10 @@ mcp = FastMCP(
     "OboxDev",
     instructions=(
         "The main entry point for Obox development tools. "
-        "Combines multiple MCP servers."
+        "Combines multiple MCP servers. "
+        "IMPORTANT: After initializing any new project (React, FastAPI, .NET, etc.), "
+        "you MUST call the `project_runner` tool to finalize the setup and "
+        "generate a `justfile`."
     ),
 )
 

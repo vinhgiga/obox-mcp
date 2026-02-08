@@ -82,12 +82,12 @@ async def detect_projects(base_path: str) -> list[tuple[str, str, str]]:
 
 
 @mcp.tool(name="project_runner")
-async def project_runner(path: str = ".") -> str:
+async def project_runner() -> str:
     """
     Finalizes project setup by detecting structure.
     Call this tool immediately after creating any new project.
     """
-    abs_path = os.path.abspath(path)
+    abs_path = os.getcwd()
 
     # 1. Install just
     success, msg = await utils.install_app("just")

@@ -32,17 +32,15 @@ async def run_rg_async(args: list[str]) -> str:
 @mcp.tool()
 async def search(
     regex: str,
-    path: str = ".",
     glob: list[str] | None = None,
     hidden: bool = False,
 ) -> str:
     """
-    Search for a regex pattern in a directory.
+    Search for a regex pattern in the codebase.
     This tool searches through the contents of files.
 
     Args:
         regex: The regex pattern to search for in file contents.
-        path: The directory or file to search in (default is current directory).
         glob: Optional glob patterns to include/exclude files (e.g., ["*.py", "!*.log"]).
         hidden: Search hidden files and directories (default: False).
     """  # noqa: E501
@@ -56,7 +54,7 @@ async def search(
             args.append("-g")
             args.append(g)
 
-    args.extend([regex, path])
+    args.extend([regex, "."])
 
     return await run_rg_async(args)
 

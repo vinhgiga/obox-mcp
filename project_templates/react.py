@@ -12,7 +12,9 @@ mcp = FastMCP(
     "OboxReact",
     instructions=(
         "A tool to initialize a new React project with Vite, pnpm, Tailwind CSS v4, "
-        "TanStack Query, and Tabler Icons."
+        "TanStack Query, and Tabler Icons. "
+        "After successful initialization, you MUST call the `project_runner` tool "
+        "from the `obox_mcp.just` server to finalize the setup."
     ),
 )
 
@@ -267,8 +269,8 @@ async def init_project(path: str) -> str:
         f"\n✨ React project successfully initialized at: {path}\n"
         "Tech Stack: Vite (React + TS), Tailwind CSS v4, "
         "TanStack Query, Tabler Icons.\n\n"
-        "To run your app:\n"
-        f"cd {path} && pnpm dev\n"
+        "🚀 **Next Step**: Call the `project_runner` tool to finalize the setup "
+        "and generate a `justfile` for running the project.\n"
     )
 
 

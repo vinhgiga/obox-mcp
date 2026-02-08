@@ -32,7 +32,6 @@ async def run_fd_async(args: list[str]) -> str:
 async def search_files(
     regex: str | None = None,
     glob: str | None = None,
-    path: str | None = None,
 ) -> str:
     """
     Search for files and directories in the codebase.
@@ -40,7 +39,6 @@ async def search_files(
     Args:
         regex: A regular expression pattern to match filenames.
         glob: A glob pattern to match filenames (e.g. `*.py`, `**/*.js`).
-        path: The root directory to start searching from.
     """
     args = []
 
@@ -49,9 +47,6 @@ async def search_files(
         args.append(glob)
     elif regex:
         args.append(regex)
-
-    if path:
-        args.append(path)
 
     return await run_fd_async(args)
 
