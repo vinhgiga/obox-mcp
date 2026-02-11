@@ -24,34 +24,38 @@ async def detect_projects(base_path: str) -> list[tuple[str, str, str]]:
     """
     projects = []
 
-    # Ensure fd is installed
-    success, _ = await utils.install_app("fd")
+    # Ensure ripgrep is installed
+    success, _ = await utils.install_app("ripgrep")
     if not success:
         return []
 
-    patterns = ["pyproject.toml", "package.json", ".*\\.csproj$", ".*\\.sln$"]
-    regex = "^(" + "|".join(patterns) + ")$"
-
     cmd = [
-        "fd",
-        "-t",
-        "f",
+        "rg",
+        "--files",
+        "--hidden",
         "--max-depth",
         "3",
-        "--exclude",
-        "node_modules",
-        "--exclude",
-        "venv",
-        "--exclude",
-        ".venv",
-        "--exclude",
-        ".git",
-        regex,
+        "--glob",
+        "pyproject.toml",
+        "--glob",
+        "package.json",
+        "--glob",
+        "*.csproj",
+        "--glob",
+        "*.sln",
+        "--glob",
+        "!node_modules/**",
+        "--glob",
+        "!venv/**",
+        "--glob",
+        "!.venv/**",
+        "--glob",
+        "!.git/**",
         base_path,
     ]
 
-    output = await utils.run_command_output(cmd, error_prefix="fd error")
-    if output.startswith("fd error"):
+    output = await utils.run_command_output(cmd, error_prefix="rg error")
+    if output.startswith("rg error"):
         return []
 
     found_paths = output.splitlines()
@@ -81,11 +85,9 @@ async def detect_projects(base_path: str) -> list[tuple[str, str, str]]:
     return projects
 
 
-@mcp.tool(name="project_runner")
-async def project_runner() -> str:
+async def run_project_runner() -> str:
     """
-    Finalizes project setup by detecting structure.
-    Call this tool immediately after creating any new project.
+    Implementation of the project runner logic.
     """
     abs_path = os.getcwd()
 
@@ -118,6 +120,7 @@ async def project_runner() -> str:
     ]
 
     dev_tasks = []
+    lint_tasks = []
 
     for rel_path, p_type, name in projects:
         # Determine unique task name
@@ -137,6 +140,9 @@ async def project_runner() -> str:
             task_name = f"{base_task_name}-{counter}"
             counter += 1
 
+        # Define lint task name
+        lint_task_name = f"lint-{task_name}" if task_name != "dev" else "lint"
+
         if p_type == "python":
             justfile_content.append(f"@{task_name}:")
             # For python, check if main.py exists
@@ -146,10 +152,22 @@ async def project_runner() -> str:
             else:
                 justfile_content.append(f"    cd {rel_path} {sep} uv sync")
             dev_tasks.append(task_name)
+
+            # Lint Python
+            justfile_content.append(f"@{lint_task_name}:")
+            justfile_content.append(f"    cd {rel_path} {sep} ruff check --fix .")
+            lint_tasks.append(lint_task_name)
+
         elif p_type == "nodejs":
             justfile_content.append(f"@{task_name}:")
             justfile_content.append(f"    cd {rel_path} {sep} pnpm dev")
             dev_tasks.append(task_name)
+
+            # Lint Node.js
+            justfile_content.append(f"@{lint_task_name}:")
+            justfile_content.append(f"    cd {rel_path} {sep} npm eslint --fix .")
+            lint_tasks.append(lint_task_name)
+
         elif p_type == "dotnet":
             # Dotnet uses 'run' by default
             d_task = task_name if task_name != "dev" else "run"
@@ -164,6 +182,12 @@ async def project_runner() -> str:
         justfile_content.append(f"dev: {' '.join(dev_tasks)}")
         justfile_content.append("")
 
+    # Add a parallel task if multiple lint tasks exist
+    if len(lint_tasks) > 1:
+        justfile_content.append("[parallel]")
+        justfile_content.append(f"lint: {' '.join(lint_tasks)}")
+        justfile_content.append("")
+
     justfile_content.append("default:\n    just --list")
 
     # 4. Write justfile
@@ -174,10 +198,17 @@ async def project_runner() -> str:
     except Exception as e:
         return f"Error writing justfile: {e!s}"
 
-    task_list = "\n".join([f"- `just {t}`" for t in dev_tasks])
+    dev_list = "\n".join([f"- `just {t}`" for t in dev_tasks])
+    lint_list = "\n".join([f"- `just {t}`" for t in lint_tasks])
+    task_list = f"{dev_list}\n{lint_list}"
     all_dev_msg = (
         "\n- `just dev` (run all detected projects in parallel)"
         if len(dev_tasks) > 1
+        else ""
+    )
+    all_lint_msg = (
+        "\n- `just lint` (run all lint tasks in parallel)"
+        if len(lint_tasks) > 1
         else ""
     )
 
@@ -186,6 +217,7 @@ async def project_runner() -> str:
         "### Available Tasks:\n"
         f"{task_list}"
         f"{all_dev_msg}"
+        f"{all_lint_msg}"
         "\n\n### How to run:\n"
         "1. Open your terminal in the project root.\n"
         "2. Run `just <task_name>` to execute a task.\n"
@@ -193,6 +225,15 @@ async def project_runner() -> str:
         "4. **IMPORTANT**: Review the generated `justfile` and modify it if your "
         "project requires additional tasks or specific build flags.\n"
     )
+
+
+@mcp.tool(name="project_runner")
+async def project_runner() -> str:
+    """
+    Finalizes project setup by detecting structure.
+    Call this tool immediately after creating any new project.
+    """
+    return await run_project_runner()
 
 
 if __name__ == "__main__":

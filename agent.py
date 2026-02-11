@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import asyncio
 
-from pydantic_ai import Agent
-
 from obox_mcp.python import (
     configure_python_environment_func,
     get_env_info_func,
@@ -11,6 +9,7 @@ from obox_mcp.python import (
     install_python_package_func,
     list_available_python_environments_func,
 )
+from pydantic_ai import Agent
 
 # Define the Agent
 python_manager_agent = Agent(
