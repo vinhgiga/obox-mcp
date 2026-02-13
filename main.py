@@ -14,7 +14,8 @@ mcp = FastMCP(
         "The main entry point for Obox development tools. "
         "Combines multiple MCP servers. "
         "IMPORTANT: After initializing any new project (React, FastAPI, .NET, etc.), "
-        "you MUST call the `project_runner` tool to finalize the setup and "
+        "you MUST call the `project_runner` tool with the project's absolute path "
+        "as the `root_working_directory` argument to finalize the setup and "
         "generate a `justfile`."
     ),
 )

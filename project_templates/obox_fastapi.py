@@ -13,7 +13,8 @@ mcp = FastMCP(
         "A tool to initialize a new FastAPI project with uv. "
         "It sets up Python 3.12 and installs fastapi[standard]. "
         "After successful initialization, you MUST call the `project_runner` tool "
-        "from the `obox_mcp.just` server to finalize the setup."
+        "from the `obox_mcp.just` server with the project's path as "
+        "`root_working_directory` to finalize the setup."
     ),
 )
 
@@ -109,6 +110,7 @@ if __name__ == "__main__":
         "To run your app:\n"
         f"cd {path} && uv run fastapi dev main.py\n"
     )
+
 
 if __name__ == "__main__":
     mcp.run()

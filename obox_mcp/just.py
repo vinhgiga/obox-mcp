@@ -12,6 +12,7 @@ mcp = FastMCP(
     "OboxProjectRunner",
     instructions=(
         "Auto-detects tasks and finalizes setup. Call after project creation. "
+        "The agent must provide the 'root_working_directory' parameter. "
         "The agent should modify the generated justfile to fit the project needs."
     ),
 )
@@ -85,11 +86,11 @@ async def detect_projects(base_path: str) -> list[tuple[str, str, str]]:
     return projects
 
 
-async def run_project_runner() -> str:
+async def run_project_runner(root_working_directory: str) -> str:
     """
     Implementation of the project runner logic.
     """
-    abs_path = os.getcwd()
+    abs_path = os.path.abspath(os.path.expanduser(root_working_directory))
 
     # 1. Install just
     success, msg = await utils.install_app("just")
@@ -228,12 +229,12 @@ async def run_project_runner() -> str:
 
 
 @mcp.tool(name="project_runner")
-async def project_runner() -> str:
+async def project_runner(root_working_directory: str) -> str:
     """
     Finalizes project setup by detecting structure.
     Call this tool immediately after creating any new project.
     """
-    return await run_project_runner()
+    return await run_project_runner(root_working_directory)
 
 
 if __name__ == "__main__":

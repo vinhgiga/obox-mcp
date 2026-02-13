@@ -14,7 +14,8 @@ mcp = FastMCP(
         "A tool to initialize a new React project with Vite, pnpm, Tailwind CSS v4, "
         "TanStack Query, and Tabler Icons. "
         "After successful initialization, you MUST call the `project_runner` tool "
-        "from the `obox_mcp.just` server to finalize the setup."
+        "from the `obox_mcp.just` server with the project's path as "
+        "`root_working_directory` to finalize the setup."
     ),
 )
 
